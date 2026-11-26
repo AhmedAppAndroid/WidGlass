@@ -1,5 +1,5 @@
 
-name: GlassFlow CI/CD
+name: GlassFlow Auto Deploy
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: github-pages
+  group: glassflow-pages
   cancel-in-progress: true
 
 jobs:
@@ -22,31 +22,315 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Configure GitHub Pages
+      - name: Configure Pages
         uses: actions/configure-pages@v6
 
-      - name: Verify application files
+      - name: Generate GlassFlow
+        shell: bash
         run: |
-          test -f index.html || {
-            echo "::error::index.html is missing"
-            exit 1
-          }
-          test -f styles.css || {
-            echo "::error::styles.css is missing"
-            exit 1
-          }
-          test -f app.js || {
-            echo "::error::app.js is missing"
-            exit 1
-          }
+          mkdir -p site
+
+          cat > site/index.html <<'HTML'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <meta name="theme-color" content="#101426">
+            <title>GlassFlow</title>
+            <style>
+              * {box-sizing:border-box}
+              body {
+                margin:0;
+                min-height:100vh;
+                padding:25px;
+                font-family:Arial,sans-serif;
+                color:var(--text);
+                background:var(--bg);
+                transition:.3s;
+              }
+              :root {
+                --bg:#0b1020;
+                --text:#f5f6ff;
+                --muted:#a5acc4;
+                --glass:rgba(255,255,255,.08);
+                --border:rgba(255,255,255,.17);
+                --accent:#aaa2ff;
+              }
+              body.light {
+                --bg:#e9edf7;
+                --text:#20253b;
+                --muted:#69728b;
+                --glass:rgba(255,255,255,.48);
+                --border:rgba(255,255,255,.8);
+                --accent:#6965dc;
+              }
+              body:before {
+                content:"";
+                position:fixed;
+                inset:0;
+                z-index:-1;
+                background:
+                  radial-gradient(circle at 10% 10%,#7868e655,transparent 40%),
+                  radial-gradient(circle at 90% 60%,#28bbd544,transparent 40%);
+              }
+              .app {max-width:1100px;margin:auto}
+              header {
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+              }
+              .logo {font-size:23px;font-weight:800}
+              .logo span {color:var(--accent)}
+              button {
+                color:var(--text);
+                cursor:pointer;
+                border:1px solid var(--border);
+                background:var(--glass);
+                border-radius:13px;
+                padding:11px 15px;
+              }
+              button:hover {filter:brightness(1.2)}
+              .welcome {margin:65px 0 35px}
+              .welcome small {
+                color:var(--muted);
+                letter-spacing:3px;
+              }
+              h1 {font-size:clamp(38px,7vw,65px);margin:12px 0}
+              h1 span {color:var(--accent)}
+              .subtitle {color:var(--muted)}
+              .grid {
+                display:grid;
+                grid-template-columns:repeat(3,minmax(0,1fr));
+                gap:15px;
+              }
+              .glass {
+                background:var(--glass);
+                border:1px solid var(--border);
+                backdrop-filter:blur(25px) saturate(160%);
+                -webkit-backdrop-filter:blur(25px) saturate(160%);
+                box-shadow:0 18px 50px #0002,
+                  inset 0 1px 0 #ffffff18;
+                border-radius:23px;
+                padding:22px;
+              }
+              .wide {grid-column:span 2}
+              .label {
+                color:var(--muted);
+                font-size:10px;
+                letter-spacing:2px;
+              }
+              .clock {
+                font-size:clamp(45px,8vw,72px);
+                font-weight:700;
+                margin:25px 0 8px;
+              }
+              .muted {color:var(--muted);font-size:12px}
+              textarea {
+                width:100%;
+                min-height:110px;
+                resize:vertical;
+                margin-top:20px;
+                background:transparent;
+                color:var(--text);
+                border:0;
+                outline:none;
+                font:inherit;
+              }
+              .timer {
+                text-align:center;
+                font-size:42px;
+                margin:25px 0;
+              }
+              .quote {
+                font-size:20px;
+                line-height:1.5;
+                margin:25px 0;
+              }
+              .primary {
+                background:linear-gradient(120deg,#aaa2ff,#78d9eb);
+                color:#11152a;
+                font-weight:bold;
+                border:0;
+              }
+              footer {
+                text-align:center;
+                color:var(--muted);
+                font-size:11px;
+                margin:30px 0;
+              }
+              @media(max-width:700px) {
+                .grid {grid-template-columns:1fr}
+                .wide {grid-column:span 1}
+                body {padding:17px}
+              }
+            </style>
+          </head>
+          <body>
+            <main class="app">
+              <header>
+                <div class="logo">glass<span>flow.</span></div>
+                <button id="theme">☀ / ☾</button>
+              </header>
+
+              <section class="welcome">
+                <small>YOUR PERSONAL SPACE</small>
+                <h1>Everything in <span>flow.</span></h1>
+                <p class="subtitle">A calmer space for your day.</p>
+              </section>
+
+              <div class="grid">
+                <section class="glass wide">
+                  <div class="label">LOCAL TIME</div>
+                  <div class="clock" id="clock">--:--</div>
+                  <div class="muted" id="date"></div>
+                </section>
+
+                <section class="glass">
+                  <div class="label">CALENDAR</div>
+                  <h2 id="calendar"></h2>
+                  <p class="muted">Your day, your pace.</p>
+                </section>
+
+                <section class="glass">
+                  <div class="label">QUICK NOTES</div>
+                  <textarea id="notes"
+                    placeholder="Write your thoughts..."></textarea>
+                  <div class="muted">Saved on this device</div>
+                </section>
+
+                <section class="glass">
+                  <div class="label">FOCUS TIMER</div>
+                  <div class="timer" id="timer">25:00</div>
+                  <button class="primary" id="start">Start focus</button>
+                  <button id="reset">↺</button>
+                </section>
+
+                <section class="glass wide">
+                  <div class="label">DAILY THOUGHT</div>
+                  <div class="quote" id="quote">
+                    Small steps still move you forward.
+                  </div>
+                  <button id="another">Another thought ↗</button>
+                </section>
+              </div>
+
+              <footer>
+                GLASSFLOW · FREE FOREVER · NO SUBSCRIPTIONS
+              </footer>
+            </main>
+
+            <script>
+              const $ = id => document.getElementById(id);
+
+              function updateClock() {
+                const now = new Date();
+                $("clock").textContent =
+                  now.toLocaleTimeString([], {
+                    hour:"2-digit",
+                    minute:"2-digit"
+                  });
+                $("date").textContent =
+                  now.toLocaleDateString([], {
+                    weekday:"long",
+                    year:"numeric",
+                    month:"long",
+                    day:"numeric"
+                  });
+                $("calendar").textContent =
+                  now.toLocaleDateString([], {
+                    month:"long",
+                    year:"numeric"
+                  });
+              }
+
+              updateClock();
+              setInterval(updateClock,1000);
+
+              if(localStorage.getItem("glass-theme")==="light")
+                document.body.classList.add("light");
+
+              $("theme").onclick = () => {
+                document.body.classList.toggle("light");
+                localStorage.setItem(
+                  "glass-theme",
+                  document.body.classList.contains("light")
+                    ? "light" : "dark"
+                );
+              };
+
+              $("notes").value =
+                localStorage.getItem("glass-notes") || "";
+
+              $("notes").oninput = () =>
+                localStorage.setItem("glass-notes",$("notes").value);
+
+              let seconds=1500;
+              let interval=null;
+
+              function showTimer() {
+                $("timer").textContent =
+                  String(Math.floor(seconds/60)).padStart(2,"0")
+                  + ":" +
+                  String(seconds%60).padStart(2,"0");
+              }
+
+              $("start").onclick = () => {
+                if(interval) {
+                  clearInterval(interval);
+                  interval=null;
+                  $("start").textContent="Resume";
+                  return;
+                }
+
+                $("start").textContent="Pause";
+
+                interval=setInterval(() => {
+                  if(seconds>0) {
+                    seconds--;
+                    showTimer();
+                  } else {
+                    clearInterval(interval);
+                    interval=null;
+                    $("start").textContent="Start again";
+                    alert("Focus session completed!");
+                  }
+                },1000);
+              };
+
+              $("reset").onclick = () => {
+                clearInterval(interval);
+                interval=null;
+                seconds=1500;
+                showTimer();
+                $("start").textContent="Start focus";
+              };
+
+              const thoughts=[
+                "Small steps still move you forward.",
+                "Focus on progress, not perfection.",
+                "One thing at a time is enough.",
+                "Make today count.",
+                "Your future is built by today's actions."
+              ];
+
+              $("another").onclick = () => {
+                const current=thoughts.indexOf($("quote").textContent);
+                $("quote").textContent=
+                  thoughts[(current+1)%thoughts.length];
+              };
+            </script>
+          </body>
+          </html>
+          HTML
 
       - name: Upload website
         uses: actions/upload-pages-artifact@v5
         with:
-          path: .
+          path: site
 
   deploy:
     name: Deploy GlassFlow
@@ -58,7 +342,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy website
         id: deployment
         uses: actions/deploy-pages@v5
         
